@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -23,11 +23,7 @@ type Configuration struct {
 	Symbols        []string
 	UpdateInterval string
 	TimeZone       string
-	MySQLUser      string
-	MySQLPass      string
-	MySQLHost      string
-	MySQLPort      string
-	MySQLDB        string
+	SQLite3File    string
 	TelegramBotApi string
 	TelegramBotID  string
 }
@@ -46,7 +42,7 @@ func main() {
 	checkFlags(configuration, db)
 
 	// Start Telegram bot
-	go startTelegramBot(configuration)
+//	go startTelegramBot(configuration)
 
 	// Do a loop over symbols
 	interval := true
@@ -63,6 +59,7 @@ func main() {
 
 		symbolSlice := configuration.Symbols[start:end]
 		symbolString := convertStocksString(symbolSlice)
+		fmt.Println("Stock: ", symbolString)
 
 		// Yahoo: http://chartapi.finance.yahoo.com/instrument/1.0/msft/chartdata;type=quote;ys=2005;yz=4;ts=1234567890/json
 		// URL to get detailed company information for a single stock
@@ -259,7 +256,7 @@ func updateAtInterval(n time.Duration, urlStocks string, configuration Configura
 		fmt.Println("BEGIN. Location:", t.Location(), ":Time:", t)
 		utc, err := time.LoadLocation(configuration.TimeZone)
 		if err != nil {
-			fmt.Println("err: ", err.Error())
+			fmt.Println("Timezone err: ", err.Error())
 			return
 		}
 		hour := t.In(utc).Hour()
@@ -267,12 +264,12 @@ func updateAtInterval(n time.Duration, urlStocks string, configuration Configura
 		weekday := t.In(utc).Weekday()
 
 		// This must only be run when the markets are open
-		if weekday != 6 && weekday != 0 && hour >= 9 && hour < 17 {
+		if true || weekday != 6 && weekday != 0 && hour >= 8 && hour < 15 {
 			fmt.Println("\tFalls within operating hours")
 			fmt.Println(hour)
 			fmt.Println(minute)
 			// Save results every 15 minutes
-			if math.Mod(float64(minute), 15.) == 0 {
+			if true || math.Mod(float64(minute), 15.) == 0 {
 				fmt.Println("\tFalls within 15 minute interval ")
 				body := getDataFromURL(urlStocks)
 
@@ -298,7 +295,7 @@ func updateAtInterval(n time.Duration, urlStocks string, configuration Configura
 		}
 
 		// Get close
-		if weekday != 6 && weekday != 0 && hour == 17 && minute == 15 {
+		if weekday != 6 && weekday != 0 && hour == 15 && minute == 30 {
 			body := getDataFromURL(urlStocks)
 
 			jsonString := sanitizeBody("google", body)
@@ -323,16 +320,21 @@ func updateAtInterval(n time.Duration, urlStocks string, configuration Configura
 
 func loadConfig(configuration *Configuration) {
 	// Get config
-	file, _ := os.Open("config.json")
-	decoder := json.NewDecoder(file)
-	err := decoder.Decode(&configuration)
+	file, err := os.Open("config.json")
 	if err != nil {
-		fmt.Println("error:", err)
+		fmt.Println("loadConfig err loading file:", err)
+		return
+	}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&configuration)
+	if err != nil {
+		fmt.Println("loadConfig Decoder error:", err)
 		return
 	}
 }
 
 func getDataFromURL(urlStocks string) (body []byte) {
+	fmt.Println("Getting position: ", urlStocks)
 	resp, err := http.Get(urlStocks)
 	if err != nil {
 		// handle error

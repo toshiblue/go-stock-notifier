@@ -4,7 +4,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"math"
 )
@@ -16,6 +16,7 @@ type Stock struct {
 	Change           string `json:"c"`
 	Close            string `json:"l"`
 	PercentageChange string `json:"cp"`
+	CloseChange      string `json:"c"`
 	Open             string `json:"op"`
 	High             string `json:"hi"`
 	Low              string `json:"lo"`
@@ -26,6 +27,7 @@ type Stock struct {
 	MarketCap        string `json:"mc"`
 	EPS              string `json:"eps"`
 	Shares           string `json:"shares"`
+	Beta             string `json:"beta"`
 }
 
 type TrendingStock struct {
@@ -40,7 +42,7 @@ type TrendingStock struct {
 // http://nerdyworm.com/blog/2013/05/15/sorting-a-slice-of-structs-in-go/
 
 func CalculateTrends(configuration Configuration, stockList []Stock, db *sql.DB, grouping string, trendDepth int) (trendingStocks []TrendingStock) {
-	db, err := sql.Open("mysql", configuration.MySQLUser+":"+configuration.MySQLPass+"@tcp("+configuration.MySQLHost+":"+configuration.MySQLPort+")/"+configuration.MySQLDB)
+	db, err := sql.Open("sqlite3", configuration.SQLite3File)
 	if err != nil {
 		fmt.Println("Could not connect to database")
 		return
@@ -149,7 +151,7 @@ func doTrendCalculation(closes []float64, volumes []float64, trendType string, s
 func calculateStdDev(configuration Configuration, db *sql.DB, symbol string, decimalPlaces int) (volatility float64, volatilityPerc float64) {
 	fmt.Println("Calculating standard deviation for symbol " + symbol)
 
-	db, err := sql.Open("mysql", configuration.MySQLUser+":"+configuration.MySQLPass+"@tcp("+configuration.MySQLHost+":"+configuration.MySQLPort+")/"+configuration.MySQLDB)
+	db, err := sql.Open("sqlite3", configuration.SQLite3File)
 	if err != nil {
 		fmt.Println("Could not connect to database")
 		return

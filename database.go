@@ -3,14 +3,15 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"strconv"
 	"strings"
 	"time"
 )
 
 func loadDatabase(configuration *Configuration) (db *sql.DB) {
-	db, err := sql.Open("mysql", configuration.MySQLUser+":"+configuration.MySQLPass+"@tcp("+configuration.MySQLHost+":"+configuration.MySQLPort+")/"+configuration.MySQLDB)
+	fmt.Println(configuration.SQLite3File)
+	db, err := sql.Open("sqlite3", configuration.SQLite3File)
 	if err != nil {
 		fmt.Println("Could not connect to database")
 		return
@@ -24,11 +25,11 @@ func loadDatabase(configuration *Configuration) (db *sql.DB) {
 		return
 	}
 
-	return
+	return db
 }
 
 func saveToDB(db *sql.DB, stockList []Stock, configuration Configuration) {
-	db, err := sql.Open("mysql", configuration.MySQLUser+":"+configuration.MySQLPass+"@tcp("+configuration.MySQLHost+":"+configuration.MySQLPort+")/"+configuration.MySQLDB)
+	db, err := sql.Open("sqlite3", configuration.SQLite3File)
 	if err != nil {
 		fmt.Println("Could not connect to database")
 		return
@@ -37,9 +38,9 @@ func saveToDB(db *sql.DB, stockList []Stock, configuration Configuration) {
 	for i := range stockList {
 		//@TODO Save results to database
 		stock := stockList[i]
-
+		fmt.Println("Saving stock: ", stock)
 		// Prepare statement for inserting data
-		insertStatement := "INSERT INTO st_data (`symbol`, `exchange`, `name`, `change`, `close`, `percentageChange`, `open`, `high`, `low`, `volume` , `avgVolume`, `high52` , `low52`, `marketCap`, `eps`, `shares`, `time`, `minute`, `hour`, `day`, `month`, `year`) "
+		insertStatement := "INSERT INTO stock_data (symbol, exchange, name, change, close, percentageChange, open, high, low, volume , avgVolume, high52 , low52, marketCap, eps, shares, time, minute, hour, day, month, year) "
 		insertStatement += "VALUES( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )"
 		stmtIns, err := db.Prepare(insertStatement)
 		if err != nil {
@@ -67,7 +68,7 @@ func saveToDB(db *sql.DB, stockList []Stock, configuration Configuration) {
 		t := time.Now()
 		utc, err := time.LoadLocation(configuration.TimeZone)
 		if err != nil {
-			fmt.Println("err: ", err.Error())
+			fmt.Println("Timezone err: ", err.Error())
 		}
 		sqlTime := int32(t.Unix())
 		sqlMinute := t.In(utc).Minute()

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/Syfaro/telegram-bot-api"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"strconv"
 	"strings"
@@ -20,7 +20,7 @@ func sendTelegramBotMessage(message string, configuration Configuration, replyId
 	bot.Debug = true
 
 	fmt.Printf("Authorized on account %s", bot.Self.UserName)
-	botId, err := strconv.Atoi(configuration.TelegramBotID)
+	botId, err := strconv.ParseInt(configuration.TelegramBotID,10,64)
 	if err != nil {
 		fmt.Println("Could not convert telegram bot id")
 		return
@@ -92,12 +92,12 @@ func processStockBotCommand(response []string, configuration Configuration, repl
 		sendTelegramBotMessage("Not enough commands! \nUsage: stock [exchange] [symbol]", configuration, replyId)
 	}
 
-	db, err := sql.Open("mysql", configuration.MySQLUser+":"+configuration.MySQLPass+"@tcp("+configuration.MySQLHost+":"+configuration.MySQLPort+")/"+configuration.MySQLDB)
+	db, err := sql.Open("sqlite3", configuration.SQLite3File)
 	if err != nil {
 		fmt.Println("Could not connect to database")
 		return
 	}
-	rows, err := db.Query("SELECT `close`, `avgVolume`, `percentageChange` FROM `st_data` WHERE `exchange` = ? AND `symbol` = ? ORDER BY `id` DESC LIMIT ?", response[1], response[2], 1)
+	rows, err := db.Query("SELECT `close`, `avgVolume`, `percentageChange` FROM `stock_data` WHERE `exchange` = ? AND `symbol` = ? ORDER BY `id` DESC LIMIT ?", response[1], response[2], 1)
 
 	count := 0
 
